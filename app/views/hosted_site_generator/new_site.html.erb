@@ -1,0 +1,105 @@
+<div id="template-and-features-section">
+	<h2>Choose A Template</h2><br>
+	<!-- select dropdown for templates -->
+	<select id="template-select">
+		<option selected disabled>Choose A Template</option>
+		<% HostedSiteTemplate::TEMPLATE_REFERENCE_DATA.each do |key,value| %>
+			<option data-reference-key="<%= key %>"><%= value[:display_name] %></option>
+		<% end %>
+	</select><br>
+
+	<h2>Choose 1 or More Features</h2>
+
+	<div class="feature-container">
+		<% HostedSiteFeature::FEATURE_REFERENCE_DATA.each do |key,value| %>
+			<label><%= value[:display_name] %>: <input class="feature-option" type="checkbox" value="<%= key %>"></label><br>
+		<% end %>
+	</div>
+
+	<button type="button" id="submit-template-and-features">Submit</button>
+</div>
+
+<div id="payment-plan-section" class="hidden">
+	<select id="payment-service-select">
+		<option selected disabled>Choose A Payment Service</option>
+		<% HostedSitePaymentService::PAYMENT_SERVICE_REFERENCE_DATA.each do |key,value| %>
+			<option data-reference-key="<%= key %>"><%= value[:display_name] %></option>
+		<% end %>
+	</select>
+
+	<button type="button" id="submit-payment-service">Submit</button>
+</div>
+
+<div id="site-details-section" class="hidden">
+	<label>Business Name: <input type="text" id="business-name" placeholder="Business Name..."></label><br>
+	<label>Business Address: <input type="text" id="business-address" placeholder="Business Address..."></label><br>
+	<button type="button" id="submit-site-details">Submit</button>
+</div>
+
+<style type="text/css">
+	.hidden {
+		display: none;
+	}
+</style>
+
+<script type="text/javascript">
+	var hosted_site_data = {};
+	var template_and_features;
+	jQuery(function($){
+		$('#submit-template-and-features').click(function(){
+			var template_key = $('#template-select option:selected').attr('data-reference-key');
+			var features = [];
+			$('.feature-option').each(function(){
+				if (this.checked) {
+					features.push({'feature': $(this).val(), 'active': true});
+				} else {
+					features.push({'feature': $(this).val(), 'active': false});
+				}
+			});
+
+			$.ajax({
+				url: '/hosted_site_generator/choose_template_and_features',
+				type: 'POST',
+				dataType: 'text',
+				data: {'template_key': template_key, 'features': features},
+				beforeSend: function(xhr) {xhr.setRequestHeader('X-CSRF-Token', $('meta[name="csrf-token"]').attr('content'))},
+		        success: function(data) {
+		        	hosted_site_data["template_and_features"] = JSON.parse(data);
+
+		        	$('#template-and-features-section').addClass('hidden');
+		        	$('#payment-plan-section').removeClass('hidden');
+		        }
+			});
+		});
+
+		$('#submit-payment-service').click(function(){
+			var payment_service_key = $('#payment-service-select option:selected').attr('data-reference-key');
+
+			$('#payment-plan-section').addClass('hidden');
+			$('#site-details-section').removeClass('hidden');
+			hosted_site_data["payment_service_key"] = payment_service_key;
+		});
+
+		$('#submit-site-details').click(function(){
+			var business_name = $('#business-name').val();
+			var business_address = $('#business-address').val();
+
+			hosted_site_data["business_data"] = {
+				business_name: business_name,
+				business_address: business_address
+			}
+
+			$.ajax({
+				url: '/hosted_site_generator/create_site',
+				type: 'POST',
+				dataType: 'text',
+				data: {'hosted_site_data': hosted_site_data},
+				beforeSend: function(xhr) {xhr.setRequestHeader('X-CSRF-Token', $('meta[name="csrf-token"]').attr('content'))},
+		        success: function(data) {
+		        	
+		        }
+			});
+		});
+	});
+</script>
+
